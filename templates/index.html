@@ -1,1 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroSense | Global Air Quality Intelligence</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+</head>
+<body>
 
+<nav class="navbar">
+    <div class="nav-brand">
+        <i class="fas fa-wind"></i>
+        <span>Aero<strong>Sense</strong></span>
+    </div>
+    <div class="nav-tagline">Global Air Quality Intelligence</div>
+    <div class="nav-status">
+        <span class="live-dot"></span> Live Data
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="hero-content">
+        <h1>Breathe Smarter.<br>Live Better.</h1>
+        <p>Real-time air quality data for every city on earth.</p>
+        <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" id="cityInput" placeholder="Search any city in the world..." />
+            <button onclick="searchCity()">Analyze</button>
+        </div>
+        <div id="loadingMsg" class="loading-msg" style="display:none;">
+            <i class="fas fa-satellite-dish fa-spin"></i>
+            Fetching live atmospheric data...
+        </div>
+        <div id="errorMsg" class="error-msg" style="display:none;">
+            <i class="fas fa-exclamation-circle"></i> City not found. Please try again.
+        </div>
+    </div>
+</section>
+
+<main class="dashboard" id="dashboard" style="display:none;">
+
+    <div class="city-header">
+        <div class="city-info">
+            <h2 id="cityName">--</h2>
+            <p id="weatherDesc">--</p>
+        </div>
+        <div class="aqi-badge" id="aqiBadge">
+            <span id="aqiValue">--</span>
+            <small id="aqiLabel">AQI</small>
+        </div>
+    </div>
+
+    <div class="health-alert" id="healthAlert">
+        <i class="fas fa-shield-heart"></i>
+        <p id="healthTip">--</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-temperature-half"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="temp">--</span>
+                <span class="stat-label">Temperature</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-droplet"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="humidity">--</span>
+                <span class="stat-label">Humidity</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-smog"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="pm25">--</span>
+                <span class="stat-label">PM2.5</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-circle-dot"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="pm10">--</span>
+                <span class="stat-label">PM10</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-atom"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="no2">--</span>
+                <span class="stat-label">NO₂</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-flask"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="o3">--</span>
+                <span class="stat-label">Ozone</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="map-chart-row">
+        <div class="map-container">
+            <div class="section-title">
+                <i class="fas fa-map-location-dot"></i> Location Map
+            </div>
+            <div id="map"></div>
+        </div>
+        <div class="chart-container">
+            <div class="section-title">
+                <i class="fas fa-chart-bar"></i> Pollutant Breakdown
+            </div>
+            <canvas id="pollutantChart"></canvas>
+        </div>
+    </div>
+
+    <div class="aqi-scale-section">
+        <div class="section-title">
+            <i class="fas fa-gauge"></i> AQI Scale Reference
+        </div>
+        <div class="aqi-scale">
+            <div class="scale-item good">
+                <span class="scale-num">1</span>
+                <span class="scale-label">Good</span>
+            </div>
+            <div class="scale-item fair">
+                <span class="scale-num">2</span>
+                <span class="scale-label">Fair</span>
+            </div>
+            <div class="scale-item moderate">
+                <span class="scale-num">3</span>
+                <span class="scale-label">Moderate</span>
+            </div>
+            <div class="scale-item poor">
+                <span class="scale-num">4</span>
+                <span class="scale-label">Poor</span>
+            </div>
+            <div class="scale-item verypoor">
+                <span class="scale-num">5</span>
+                <span class="scale-label">Very Poor</span>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<section class="top-cities">
+    <div class="section-title">
+        <i class="fas fa-ranking-star"></i> Top 10 Most Polluted Cities Today
+    </div>
+    <div class="cities-grid" id="citiesGrid">
+        <div class="loading-cities">
+            <i class="fas fa-spinner fa-spin"></i> Loading live data...
+        </div>
+    </div>
+</section>
+
+<section class="calculator">
+    <div class="section-title">
+        <i class="fas fa-calculator"></i> Health Impact Calculator
+    </div>
+    <p class="calc-desc">Estimate long-term health risk based on air quality exposure.</p>
+    <div class="calc-form">
+        <div class="calc-field">
+            <label>City</label>
+            <input type="text" id="calcCity" placeholder="Enter city name" />
+        </div>
+        <div class="calc-field">
+            <label>Years of Exposure</label>
+            <input type="number" id="calcYears" placeholder="e.g. 5" min="1" max="50" />
+        </div>
+        <div class="calc-field">
+            <label>Age Group</label>
+            <select id="calcAge">
+                <option value="child">Child (0-12)</option>
+                <option value="teen">Teen (13-19)</option>
+                <option value="adult" selected>Adult (20-60)</option>
+                <option value="senior">Senior (60+)</option>
+            </select>
+        </div>
+        <button class="calc-btn" onclick="calculateImpact()">
+            <i class="fas fa-calculator"></i> Calculate Risk
+        </button>
+    </div>
+    <div class="calc-result" id="calcResult" style="display:none;"></div>
+</section>
+
+<footer class="footer">
+    <div class="footer-brand">
+        <i class="fas fa-wind"></i> AeroSense
+    </div>
+    <p>Real-time air quality intelligence for a healthier world.</p>
+    <p>Data powered by OpenWeatherMap API</p>
+    <p class="footer-copy">© 2026 AeroSense. Built for EnviroCast Global Engineering Outlook Hackathon.</p>
+</footer>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+  </html>
